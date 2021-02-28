@@ -156,7 +156,7 @@ check-relay-tip: ## check relay node tip
 	@CARDANO_NODE_SOCKET_PATH=$(RELAY_NODE_DIR)/socket \
 		cardano-cli query tip --$(NETWORK)$(NETWORK_PARAMETER) | jq
 	CARDANO_NODE_SOCKET_PATH=$(RELAY_NODE_DIR)/socket \
-		cardano-cli query protocol-parameters \
+		cardano-cli query protocol-parameters --mary-era \
 			--$(NETWORK)$(NETWORK_PARAMETER) \
 			--out-file $(POOL_DIR)/protocol.json
 
@@ -208,7 +208,7 @@ get-addresses: ## generate payment and staking addresses
 .PHONY: get-balance
 get-payment-balance: ## get balance for payment address from relay node
 	@CARDANO_NODE_SOCKET_PATH=$(RELAY_NODE_DIR)/socket \
-	cardano-cli query utxo \
+	cardano-cli query utxo --mary-era \
 		--address $(shell cat $(POOL_KEY_DIR)/payment.addr) \
 		--$(NETWORK)$(NETWORK_PARAMETER)
 
