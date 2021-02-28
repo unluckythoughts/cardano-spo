@@ -54,8 +54,8 @@ define get-config-files
 	wget -nc -qP $(1) https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/mainnet-byron-genesis.json
 	wget -nc -qP $(1) https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/mainnet-shelley-genesis.json
 	wget -nc -qP $(1) https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/mainnet-topology.json
-	sed -i 's/\(TraceBlockFetchDecisions": \).*$$/\1true' $(1)/mainnet-config.json
-	sed -i 's/\(TraceBlockFetchDecisions": \).*$$/\1true' $(1)/testnet-config.json
+	sed -i 's/\(TraceBlockFetchDecisions": \).*$$/\1true/g' $(1)/mainnet-config.json
+	sed -i 's/\(TraceBlockFetchDecisions": \).*$$/\1true/g' $(1)/testnet-config.json
 endef
 
 get-relay-config-files:
