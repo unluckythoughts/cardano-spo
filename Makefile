@@ -222,7 +222,7 @@ generate-registration-certificate: ## get registration certificate for stake key
 get-min-fee: ## gets minimum fee for the given tx input
 	cardano-cli transaction build-raw \
 		--tx-in $(txIn) \
-		--tx-out $(cat $(POOL_KEY_DIR)/payment.addr)+0 \
+		--tx-out $(shell cat $(POOL_KEY_DIR)/payment.addr)+0 \
 		--invalid-hereafter 0 \
 		--fee 0 \
 		--out-file tx.raw \
