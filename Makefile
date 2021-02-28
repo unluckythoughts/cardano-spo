@@ -26,14 +26,25 @@ STAKING_NODE_DIR=$(POOL_DIR)/node
 STAKING_NODE_PORT=3002
 RELAY_NODE_PORT=3000
 
-update:
+# help extracts the help texts for the comments following ': ##'
+.PHONY: help
+help: ## Print this help message
+	@awk -F':.*## ' ' \
+		/^[[:alpha:]_-]+:.*## / { \
+			printf "\033[36m%s\033[0m\t%s\n", $$1, $$2 \
+		} \
+	' $(MAKEFILE_LIST) | column -s$$'\t' -t
+
+
+.PHONY: update
+update: ## update ubuntu and setup required dependencies
 	apt-get update
 	apt-get upgrade -y
 	apt-get install -y --no-install-recommends netbase jq libnuma-dev docker.io
 	sudo systemctl start docker
-	sudo systemctl enable docker
 
-build-cardano:
+.PHONY: build-cardano
+build-cardano: ## builds cardano node binaries in a docker
 	nohup docker build \
 		--tag cardano-node:${CARDANO_NODE_VERSION}-${OS_ARCH} \
 		--build-arg OS_ARCH="${OS_ARCH}" \
@@ -44,7 +55,8 @@ build-cardano:
 		-f $(CARDANO_NODE_DOCKERFILE) . > binary.out 2>&1 &
 	tail -f binary.out
 
-get-binary:
+.PHONY: get-binary
+get-binary: ## move binaries built in docker to the local machine
 	mkdir -p ${INSTALL_DIR}
 	docker run \
 		--volume ${INSTALL_DIR}:/dist \
@@ -53,14 +65,16 @@ get-binary:
 			mkdir -p /dist/lib/ && cp -r /usr/local/lib/lib* /dist/lib; \
 			mkdir -p /dist/lib/pkgconfig && cp -r /usr/local/lib/pkgconfig/lib* /dist/lib/pkgconfig"
 
-get-node-exporter:
+.PHONY: get-node-exporter
+get-node-exporter: ## install node exporter
 	wget -nc -q https://github.com/prometheus/node_exporter/releases/download/v$(NODE_EXPORTER_VERSION)/node_exporter-$(NODE_EXPORTER_VERSION).linux-amd64.tar.gz
 	tar xfz node_exporter-$(NODE_EXPORTER_VERSION).linux-amd64.tar.gz
 	cd node_exporter-$(NODE_EXPORTER_VERSION).linux-amd64
 	mv ./node_exporter /usr/local/bin/
 	cd .. && rm -rf node_exporter*
 
-get-prometheus:
+.PHONY: get-prometheus
+get-prometheus: ## install prometheus
 	wget -nc -q https://github.com/prometheus/prometheus/releases/download/v$(PROMETHEUS_VERSION)/prometheus-$(PROMETHEUS_VERSION).linux-amd64.tar.gz
 	tar xfz node_exporter-$(PROMETHEUS_VERSION).linux-amd64.tar.gz
 	cd node_exporter-$(PROMETHEUS_VERSION).linux-amd64
@@ -80,7 +94,8 @@ define get-config-files
 	sed -i 's/\(TraceBlockFetchDecisions": \).*$$/\1true,/g' $(1)/testnet-config.json
 endef
 
-get-relay-config-files:
+.PHONY: get-relay-config-files
+get-relay-config-files: ## download relay node config files
 	@$(call get-config-files,$(RELAY_NODE_DIR))
 	[[ grep -c "CARDANO_NODE_SOCKET_PATH" -eq 0 ]] && \
 		export CARDANO_NODE_SOCKET_PATH=$(RELAY_NODE_DIR)/socket >> ~/.bashrc
@@ -92,7 +107,8 @@ get-relay-config-files:
       "valency":1/g' \
 		$(RELAY_NODE_DIR)/testnet-topology.json
 
-get-node-config-files:
+.PHONY: get-node-config-files
+get-node-config-files: ## download staking node config files
 	@$(call get-config-files,$(STAKING_NODE_DIR))
 	sed -i \
 		-e 's/"addr": .*$$/"addr": "$(PUBLIC_IP)",/g' \
@@ -100,55 +116,65 @@ get-node-config-files:
 		-e 's/"valency": .*$$/"valency": 1/g' \
 		$(STAKING_NODE_DIR)/testnet-topology.json
 
-run-relay:
-	cardano-node run \
+.PHONY: run-relay
+run-relay: ## run relay node in terminal
+	@cardano-node run \
 		--topology $(RELAY_NODE_DIR)/$(NETWORK)-topology.json \
 		--database-path $(RELAY_NODE_DIR)/db \
 		--socket-path $(RELAY_NODE_DIR)/socket \
 		--config $(RELAY_NODE_DIR)/$(NETWORK)-config.json \
 		--port $(RELAY_NODE_PORT)
 
-setup-relay-node-service:
-	sed \
+.PHONY: setup-relay-node-service
+setup-relay-node-service: ## setup relay node service and enable it to start on restart
+	@sed \
 		-e 's:NODE_DIR:$(RELAY_NODE_DIR):g' \
 		-e 's:NODE_PORT:$(RELAY_NODE_PORT):g' \
 		-e 's:NETWORK:$(NETWORK):g' \
 		$(CARDANO_NODE_SERVICEFILE) > /etc/systemd/system/cardano-relay-node.service
 	sudo systemctl enable cardano-relay-node
 
-start-relay-node:
-	sudo systemctl start cardano-relay-node
+.PHONY: start-relay-node
+start-relay-node: ## start relay node service
+	@sudo systemctl start cardano-relay-node
 	sudo systemctl status cardano-relay-node
 
-stop-relay-node:
-	sudo systemctl stop cardano-relay-node
+.PHONY: stop-relay-node
+stop-relay-node: ## stop relay node service
+	@sudo systemctl stop cardano-relay-node
 	sudo systemctl status cardano-relay-node
 
-check-relay-tip:
-	CARDANO_NODE_SOCKET_PATH=$(RELAY_NODE_DIR)/socket \
+.PHONY: check-relay-tip
+check-relay-tip: ## check relay node tip
+	@CARDANO_NODE_SOCKET_PATH=$(RELAY_NODE_DIR)/socket \
 	cardano-cli query tip --$(NETWORK)$(NETWORK_PARAMETER) | jq
 
-setup-staking-node-service:
-	sed \
+.PHONY: setup-staking-node-service
+setup-staking-node-service: ## setup staking node service and enable it to start on restart
+	@sed \
 		-e 's:NODE_DIR:$(STAKING_NODE_DIR):g' \
 		-e 's:NODE_PORT:$(STAKING_NODE_PORT):g' \
 		-e 's:NETWORK:$(NETWORK):g' \
 		$(CARDANO_NODE_SERVICEFILE) > /etc/systemd/system/cardano-staking-node.service
 	sudo systemctl enable cardano-staking-node
 
-start-staking-node-node:
-	sudo systemctl start cardano-staking-node
+.PHONY: start-staking-node-node
+start-staking-node-node: ## start staking node service
+	@sudo systemctl start cardano-staking-node
 	sudo systemctl status cardano-staking-node
 
-stop-staking-node-node:
-	sudo systemctl stop cardano-staking-node
+.PHONY: stop-staking-node-node
+stop-staking-node-node: ## stop staking node service
+	@sudo systemctl stop cardano-staking-node
 	sudo systemctl status cardano-staking-node
 
-check-node-tip:
-	CARDANO_NODE_SOCKET_PATH=$(STAKING_NODE_DIR)/socket \
+.PHONY: check-node-tip
+check-node-tip: ## check staking node tip
+	@CARDANO_NODE_SOCKET_PATH=$(STAKING_NODE_DIR)/socket \
 	cardano-cli query tip --$(NETWORK)$(NETWORK_PARAMETER) | jq
 
-generate-keys:
+.PHONY: generate-keys
+generate-keys: ## generate payment and staking keys
 	@cardano-cli address key-gen \
 		--verification-key-file $(POOL_KEY_DIR)/payment.vkey \
 		--signing-key-file $(POOL_KEY_DIR)/payment.skey
@@ -156,7 +182,8 @@ generate-keys:
 		--verification-key-file $(POOL_KEY_DIR)/stake.vkey \
 		--signing-key-file $(POOL_KEY_DIR)/stake.skey
 
-get-addresses:
+.PHONY: get-addresses
+get-addresses: ## generate payment and staking addresses
 	@cardano-cli address build \
 		--payment-verification-key-file $(POOL_KEY_DIR)/payment.vkey \
 		--stake-verification-key-file $(POOL_KEY_DIR)/stake.vkey \
@@ -167,10 +194,11 @@ get-addresses:
 		--out-file $(POOL_KEY_DIR)/stake.addr \
 		--$(NETWORK)$(NETWORK_PARAMETER)
 
-get-balance:
-	mkdir -p $(POOL_KEY_DIR) && cd $(POOL_KEY_DIR)
-	@cardano-cli query utxo \
-		--address $(shell cat payment.addr) \
+.PHONY: get-balance
+get-payment-balance: ## get balance for payment address from relay node
+	@CARDANO_NODE_SOCKET_PATH=$(STAKING_NODE_DIR)/socket \
+	cardano-cli query utxo \
+		--address $(shell cat $(POOL_KEY_DIR)/payment.addr) \
 		--$(NETWORK)$(NETWORK_PARAMETER)
 
 
