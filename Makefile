@@ -59,19 +59,19 @@ endef
 get-relay-config-files:
 	@$(call get-config-files,$(RELAY_NODE_DIR))
 	sed -i \
-		's/\("valency": 2\)/\1\
-    },{\
-      "addr": "$(PUBLIC_IP)",\
-      "port":$(BLOCK_PRODUCING_NODE_PORT),\
+		's/\("valency": 2\)/\1 \
+    },{ \
+      "addr": "$(PUBLIC_IP)", \
+      "port":$(BLOCK_PRODUCING_NODE_PORT), \
       "valency":1/g' \
 		$(RELAY_NODE_DIR)/testnet-topology.json
 
 get-node-config-files:
 	@$(call get-config-files,$(BLOCK_PRODUCING_NODE_DIR))
 	sed -i \
-		-e 's/"addr": .*$$/"addr": "$(PUBLIC_IP)",/g'\
-		-e 's/"port": .*$$/"port": "$(RELAY_NODE_PORT)",/g'\
-		-e 's/"valency": .*$$/"valency": 1/g'\
+		-e 's/"addr": .*$$/"addr": "$(PUBLIC_IP)",/g' \
+		-e 's/"port": .*$$/"port": "$(RELAY_NODE_PORT)",/g' \
+		-e 's/"valency": .*$$/"valency": 1/g' \
 		$(BLOCK_PRODUCING_NODE_DIR)/testnet-topology.json
 
 generate-keys:
@@ -106,6 +106,8 @@ start-relay:
 	cardano-node run \
 		--topology $(RELAY_NODE_DIR)/testnet-topology.json \
 		--database-path $(RELAY_NODE_DIR)/db \
-		--socket-path $(RELAY_NODE_DIR) \
+		--socket-path $(RELAY_NODE_DIR)/socket \
+		--config $(RELAY_NODE_DIR)/testnet-config.json \
 		--port $(RELAY_NODE_PORT)
+
 
