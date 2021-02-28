@@ -207,7 +207,7 @@ get-addresses: ## generate payment and staking addresses
 
 .PHONY: get-balance
 get-payment-balance: ## get balance for payment address from relay node
-	@CARDANO_NODE_SOCKET_PATH=$(STAKING_NODE_DIR)/socket \
+	@CARDANO_NODE_SOCKET_PATH=$(RELAY_NODE_DIR)/socket \
 	cardano-cli query utxo \
 		--address $(shell cat $(POOL_KEY_DIR)/payment.addr) \
 		--$(NETWORK)$(NETWORK_PARAMETER)
