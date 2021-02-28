@@ -76,10 +76,10 @@ get-node-exporter: ## install node exporter
 .PHONY: get-prometheus
 get-prometheus: ## install prometheus
 	wget -nc -q https://github.com/prometheus/prometheus/releases/download/v$(PROMETHEUS_VERSION)/prometheus-$(PROMETHEUS_VERSION).linux-amd64.tar.gz
-	tar xfz node_exporter-$(PROMETHEUS_VERSION).linux-amd64.tar.gz
-	cd node_exporter-$(PROMETHEUS_VERSION).linux-amd64
-	mv ./node_exporter /usr/local/bin/
-	cd .. && rm -rf node_exporter*
+	tar xfz prometheus-$(PROMETHEUS_VERSION).linux-amd64.tar.gz
+	cd prometheus-$(PROMETHEUS_VERSION).linux-amd64
+	mv ./prometheus /usr/local/bin/
+	cd .. && rm -rf prometheus*
 
 define get-config-files
 	@wget -nc -qP $(1) https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/testnet-config.json
