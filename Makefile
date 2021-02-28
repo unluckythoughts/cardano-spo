@@ -9,11 +9,11 @@ CARDANO_NODE_VERSION=1.25.1
 INSTALL_DIR=/usr/local/bin
 OS_ARCH=$(shell uname -m)
 
-NETWORK="testnet"
-NETWORK_PARAMETER="-magic 1097911063"
+# NETWORK=mainnet
+# NETWORK_PARAMETER=
 
-NETWORK="mainnet"
-NETWORK_PARAMETER=""
+NETWORK=testnet
+NETWORK_PARAMETER=-magic 1097911063
 
 PUBLIC_IP=159.203.58.57
 POOL_DIR=$(PWD)/pool
@@ -101,6 +101,7 @@ setup-relay-node-service:
 
 start-relay-node:
 	sudo systemctl start cardano-relay-node
+	sudo systemctl status cardano-relay-node
 
 generate-keys:
 	@cardano-cli address key-gen \
