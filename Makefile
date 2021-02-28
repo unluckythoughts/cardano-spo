@@ -126,7 +126,7 @@ stop-relay-node:
 
 check-relay-tip:
 	CARDANO_NODE_SOCKET_PATH=$(RELAY_NODE_DIR)/socket \
-	cardano-cli query tip --$(NETWORK)(NETWORK_PARAMETER) | jq
+	cardano-cli query tip --$(NETWORK)$(NETWORK_PARAMETER) | jq
 
 setup-staking-node-service:
 	sed \
@@ -146,7 +146,7 @@ stop-staking-node-node:
 
 check-node-tip:
 	CARDANO_NODE_SOCKET_PATH=$(STAKING_NODE_DIR)/socket \
-	cardano-cli query tip --$(NETWORK)(NETWORK_PARAMETER) | jq
+	cardano-cli query tip --$(NETWORK)$(NETWORK_PARAMETER) | jq
 
 generate-keys:
 	@cardano-cli address key-gen \
