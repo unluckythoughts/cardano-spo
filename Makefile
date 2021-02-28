@@ -54,10 +54,10 @@ get-config-files:
 	@wget -qP $(1) https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/mainnet-topology.json
 
 get-relay-config-files:
-	$(call get-config-files,RELAY_NODE_DIR)
+	$(call get-config-files,$(RELAY_NODE_DIR))
 
 get-node-config-files:
-	$(call get-config-files,BLOCK_PRODUCING_NODE_DIR)
+	$(call get-config-files,$(BLOCK_PRODUCING_NODE_DIR))
 
 generate-keys:
 	mkdir -p $(POOL_KEY_DIR) && cd $(POOL_KEY_DIR)
