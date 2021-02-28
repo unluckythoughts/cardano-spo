@@ -14,7 +14,6 @@ POOL_DIR="pool"
 POOL_KEY_DIR=$(POOL_DIR)/keys
 RELAY_NODE_DIR=$(POOL_DIR)/relay
 BLOCK_PRODUCING_NODE_DIR=$(POOL_DIR)/node
-NODE_CONFIG_DIR=$(NODE_DIR)/config
 
 update:
 	apt-get update
@@ -55,10 +54,10 @@ define get-config-files
 endef
 
 get-relay-config-files:
-	$(call get-config-files,$(RELAY_NODE_DIR))
+	@$(call get-config-files,$(RELAY_NODE_DIR))
 
 get-node-config-files:
-	$(call get-config-files,$(BLOCK_PRODUCING_NODE_DIR))
+	@$(call get-config-files,$(BLOCK_PRODUCING_NODE_DIR))
 
 generate-keys:
 	mkdir -p $(POOL_KEY_DIR) && cd $(POOL_KEY_DIR)
