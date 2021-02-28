@@ -42,7 +42,7 @@ WORKDIR /build/cardano-node
 RUN git clone --branch ${CARDANO_NODE_VERSION} https://github.com/input-output-hk/cardano-node.git && \
     cd cardano-node && \
     ~/.local/bin/cabal configure --with-compiler=ghc-8.10.2 && \
-    ~/.local/bin/cabal build all
+    ~/.local/bin/cabal build cardano-node cardano-cli
 
 FROM ubuntu:20.04
 ARG OS_ARCH

@@ -8,8 +8,13 @@ CARDANO_NODE_VERSION=1.25.1
 INSTALL_DIR=/usr/local/bin
 OS_ARCH=$(shell uname -m)
 
+NETWORK="testnet"
+NETWORK_PARAMETER="-magic 1097911063"
+
+NETWORK="mainnet"
+NETWORK_PARAMETER=""
+
 PUBLIC_IP=159.203.58.57
-NETWORK="testnet-magic 1097911063"
 CABAL_CONFIG_FILE=${HOME}/.cabal/config
 POOL_DIR=$(PWD)/pool
 POOL_KEY_DIR=$(POOL_DIR)/keys
@@ -60,6 +65,8 @@ endef
 
 get-relay-config-files:
 	@$(call get-config-files,$(RELAY_NODE_DIR))
+	[[ grep -c "CARDANO_NODE_SOCKET_PATH" -eq 0 ]] && \
+		export CARDANO_NODE_SOCKET_PATH=$(RELAY_NODE_DIR)/socket >> ~/.bashrc
 	sed -i \
 		's/\("valency": 2\)/\1 \
     },{ \
@@ -76,11 +83,30 @@ get-node-config-files:
 		-e 's/"valency": .*$$/"valency": 1/g' \
 		$(BLOCK_PRODUCING_NODE_DIR)/testnet-topology.json
 
+run-relay:
+	cardano-node run \
+		--topology $(RELAY_NODE_DIR)/$(NETWORK)-topology.json \
+		--database-path $(RELAY_NODE_DIR)/db \
+		--socket-path $(RELAY_NODE_DIR)/socket \
+		--config $(RELAY_NODE_DIR)/$(NETWORK)-config.json \
+		--port $(RELAY_NODE_PORT)
+
+setup-relay-node-service:
+	sed \
+		-e 's/NODE_DIR/$(RELAY_NODE_DIR)/g' \
+		-e 's/NODE_PORT/$(RELAY_NODE_PORT)/g' \
+		-e 's/NETWORK/$(NETWORK)/g' \
+		./cardano-node.service > /etc/systemd/system/cardano-relay-node.service
+	sudo systemctl enable cardano-relay-node
+
+start-relay-node:
+	sudo systemctl start cardano-relay-node
+
 generate-keys:
 	@cardano-cli address key-gen \
 		--verification-key-file $(POOL_KEY_DIR)/payment.vkey \
 		--signing-key-file $(POOL_KEY_DIR)/payment.skey
-	@cardano-cli stake-address key-gen \
+	cardano-cli stake-address key-gen \
 		--verification-key-file $(POOL_KEY_DIR)/stake.vkey \
 		--signing-key-file $(POOL_KEY_DIR)/stake.skey
 
@@ -89,27 +115,16 @@ get-addresses:
 		--payment-verification-key-file $(POOL_KEY_DIR)/payment.vkey \
 		--stake-verification-key-file $(POOL_KEY_DIR)/stake.vkey \
 		--out-file $(POOL_KEY_DIR)/payment.addr \
-		--$(NETWORK)
-	@cardano-cli stake-address build \
+		--$(NETWORK)$(NETWORK_PARAMETER)
+	cardano-cli stake-address build \
 		--stake-verification-key-file $(POOL_KEY_DIR)/stake.vkey \
 		--out-file $(POOL_KEY_DIR)/stake.addr \
-		--$(NETWORK)
+		--$(NETWORK)$(NETWORK_PARAMETER)
 
 get-balance:
 	mkdir -p $(POOL_KEY_DIR) && cd $(POOL_KEY_DIR)
 	@cardano-cli query utxo \
 		--address $(shell cat payment.addr) \
-		--$(NETWORK)
-
-update-cabal-overwrite-policy:
-	sed -i "s/-- overwrite-policy:/-- overwrite-policy: always/g" $(CABAL_CONFIG_FILE)
-
-start-relay:
-	cardano-node run \
-		--topology $(RELAY_NODE_DIR)/testnet-topology.json \
-		--database-path $(RELAY_NODE_DIR)/db \
-		--socket-path $(RELAY_NODE_DIR)/socket \
-		--config $(RELAY_NODE_DIR)/testnet-config.json \
-		--port $(RELAY_NODE_PORT)
+		--$(NETWORK)$(NETWORK_PARAMETER)
 
 
