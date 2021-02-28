@@ -1,6 +1,7 @@
 .ONESHELL:
 
 CARDANO_NODE_DOCKERFILE=$(PWD)/Dockerfile
+CARDANO_NODE_SERVICEFILE=$(PWD)/cardano-node.service
 GHC_VERSION=8.10.2
 CABAL_VERSION=3.2.0.0
 LIBSODIUM_VERSION=66f017f1
@@ -15,7 +16,6 @@ NETWORK="mainnet"
 NETWORK_PARAMETER=""
 
 PUBLIC_IP=159.203.58.57
-CABAL_CONFIG_FILE=${HOME}/.cabal/config
 POOL_DIR=$(PWD)/pool
 POOL_KEY_DIR=$(POOL_DIR)/keys
 RELAY_NODE_DIR=$(POOL_DIR)/relay
@@ -93,10 +93,10 @@ run-relay:
 
 setup-relay-node-service:
 	sed \
-		-e 's/NODE_DIR/$(RELAY_NODE_DIR)/g' \
-		-e 's/NODE_PORT/$(RELAY_NODE_PORT)/g' \
-		-e 's/NETWORK/$(NETWORK)/g' \
-		./cardano-node.service > /etc/systemd/system/cardano-relay-node.service
+		-e 's:NODE_DIR:$(RELAY_NODE_DIR):g' \
+		-e 's:NODE_PORT:$(RELAY_NODE_PORT):g' \
+		-e 's:NETWORK:$(NETWORK):g' \
+		$(CARDANO_NODE_SERVICEFILE) > /etc/systemd/system/cardano-relay-node.service
 	sudo systemctl enable cardano-relay-node
 
 start-relay-node:
