@@ -212,4 +212,7 @@ get-payment-balance: ## get balance for payment address from relay node
 		--address $(shell cat $(POOL_KEY_DIR)/payment.addr) \
 		--$(NETWORK)$(NETWORK_PARAMETER)
 
-
+.PHONY: get-faucet-balance
+get-faucet-balance:
+	curl -v -XPOST \
+		"https://faucet.cardano-testnet.iohk.io/send-money/$(shell cat $(POOL_KEY_DIR)/payment.addr)?apiKey=kRl9TACrYmXaPKQ5sRm8on2lB7Pi03aG"
