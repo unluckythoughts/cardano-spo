@@ -21,7 +21,7 @@ NETWORK_PARAMETER=-magic 1097911063
 
 PUBLIC_IP=159.203.58.57
 POOL_DIR=$(PWD)/pool
-POOL_KEY_DIR=$(POOL_DIR)/keys
+POOL_KEY_DIR=$(POOL_DIR)/wallet
 RELAY_NODE_DIR=$(POOL_DIR)/relay
 STAKING_NODE_DIR=$(POOL_DIR)/node
 STAKING_NODE_PORT=3002
@@ -154,7 +154,11 @@ stop-relay-node: ## stop relay node service
 .PHONY: check-relay-tip
 check-relay-tip: ## check relay node tip
 	@CARDANO_NODE_SOCKET_PATH=$(RELAY_NODE_DIR)/socket \
-	cardano-cli query tip --$(NETWORK)$(NETWORK_PARAMETER) | jq
+		cardano-cli query tip --$(NETWORK)$(NETWORK_PARAMETER) | jq
+	CARDANO_NODE_SOCKET_PATH=$(RELAY_NODE_DIR)/socket \
+		cardano-cli query protocol-parameters \
+			--$(NETWORK)$(NETWORK_PARAMETER) \
+			--out-file $(POOL_DIR)/protocol.json
 
 .PHONY: setup-staking-node-service
 setup-staking-node-service: ## setup staking node service and enable it to start on restart
