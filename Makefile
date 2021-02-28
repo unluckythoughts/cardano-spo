@@ -6,6 +6,9 @@ GHC_VERSION=8.10.2
 CABAL_VERSION=3.2.0.0
 LIBSODIUM_VERSION=66f017f1
 CARDANO_NODE_VERSION=1.25.1
+PROMETHEUS_VERSION=2.25.0
+NODE_EXPORTER_VERSION=1.1.1
+
 INSTALL_DIR=/usr/local/bin
 OS_ARCH=$(shell uname -m)
 
@@ -19,8 +22,8 @@ PUBLIC_IP=159.203.58.57
 POOL_DIR=$(PWD)/pool
 POOL_KEY_DIR=$(POOL_DIR)/keys
 RELAY_NODE_DIR=$(POOL_DIR)/relay
-BLOCK_PRODUCING_NODE_DIR=$(POOL_DIR)/node
-BLOCK_PRODUCING_NODE_PORT=3002
+STAKING_NODE_DIR=$(POOL_DIR)/node
+STAKING_NODE_PORT=3002
 RELAY_NODE_PORT=3000
 
 update:
@@ -50,6 +53,20 @@ get-binary:
 			mkdir -p /dist/lib/ && cp -r /usr/local/lib/lib* /dist/lib; \
 			mkdir -p /dist/lib/pkgconfig && cp -r /usr/local/lib/pkgconfig/lib* /dist/lib/pkgconfig"
 
+get-node-exporter:
+	wget -nc -q https://github.com/prometheus/node_exporter/releases/download/v$(NODE_EXPORTER_VERSION)/node_exporter-$(NODE_EXPORTER_VERSION).linux-amd64.tar.gz
+	tar xfz node_exporter-$(NODE_EXPORTER_VERSION).linux-amd64.tar.gz
+	cd node_exporter-$(NODE_EXPORTER_VERSION).linux-amd64
+	mv ./node_exporter /usr/local/bin/
+	cd .. && rm -rf node_exporter*
+
+get-prometheus:
+	wget -nc -q https://github.com/prometheus/prometheus/releases/download/v$(PROMETHEUS_VERSION)/prometheus-$(PROMETHEUS_VERSION).linux-amd64.tar.gz
+	tar xfz node_exporter-$(PROMETHEUS_VERSION).linux-amd64.tar.gz
+	cd node_exporter-$(PROMETHEUS_VERSION).linux-amd64
+	mv ./node_exporter /usr/local/bin/
+	cd .. && rm -rf node_exporter*
+
 define get-config-files
 	@wget -nc -qP $(1) https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/testnet-config.json
 	wget -nc -qP $(1) https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/testnet-byron-genesis.json
@@ -71,17 +88,17 @@ get-relay-config-files:
 		's/\("valency": 2\)/\1 \
     },{ \
       "addr": "$(PUBLIC_IP)", \
-      "port":$(BLOCK_PRODUCING_NODE_PORT), \
+      "port":$(STAKING_NODE_PORT), \
       "valency":1/g' \
 		$(RELAY_NODE_DIR)/testnet-topology.json
 
 get-node-config-files:
-	@$(call get-config-files,$(BLOCK_PRODUCING_NODE_DIR))
+	@$(call get-config-files,$(STAKING_NODE_DIR))
 	sed -i \
 		-e 's/"addr": .*$$/"addr": "$(PUBLIC_IP)",/g' \
 		-e 's/"port": .*$$/"port": "$(RELAY_NODE_PORT)",/g' \
 		-e 's/"valency": .*$$/"valency": 1/g' \
-		$(BLOCK_PRODUCING_NODE_DIR)/testnet-topology.json
+		$(STAKING_NODE_DIR)/testnet-topology.json
 
 run-relay:
 	cardano-node run \
@@ -102,6 +119,34 @@ setup-relay-node-service:
 start-relay-node:
 	sudo systemctl start cardano-relay-node
 	sudo systemctl status cardano-relay-node
+
+stop-relay-node:
+	sudo systemctl stop cardano-relay-node
+	sudo systemctl status cardano-relay-node
+
+check-relay-tip:
+	CARDANO_NODE_SOCKET_PATH=$(RELAY_NODE_DIR)/socket \
+	cardano-cli query tip --$(NETWORK)(NETWORK_PARAMETER) | jq
+
+setup-staking-node-service:
+	sed \
+		-e 's:NODE_DIR:$(STAKING_NODE_DIR):g' \
+		-e 's:NODE_PORT:$(STAKING_NODE_PORT):g' \
+		-e 's:NETWORK:$(NETWORK):g' \
+		$(CARDANO_NODE_SERVICEFILE) > /etc/systemd/system/cardano-staking-node.service
+	sudo systemctl enable cardano-staking-node
+
+start-staking-node-node:
+	sudo systemctl start cardano-staking-node
+	sudo systemctl status cardano-staking-node
+
+stop-staking-node-node:
+	sudo systemctl stop cardano-staking-node
+	sudo systemctl status cardano-staking-node
+
+check-node-tip:
+	CARDANO_NODE_SOCKET_PATH=$(STAKING_NODE_DIR)/socket \
+	cardano-cli query tip --$(NETWORK)(NETWORK_PARAMETER) | jq
 
 generate-keys:
 	@cardano-cli address key-gen \
