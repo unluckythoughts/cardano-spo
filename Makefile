@@ -212,7 +212,26 @@ get-payment-balance: ## get balance for payment address from relay node
 		--address $(shell cat $(POOL_KEY_DIR)/payment.addr) \
 		--$(NETWORK)$(NETWORK_PARAMETER)
 
-.PHONY: get-faucet-balance
-get-faucet-balance:
-	curl -v -XPOST \
-		"https://faucet.cardano-testnet.iohk.io/send-money/$(shell cat $(POOL_KEY_DIR)/payment.addr)?apiKey=kRl9TACrYmXaPKQ5sRm8on2lB7Pi03aG"
+.PHONY: generate-registration-certificate
+generate-registration-certificate: ## get registration certificate for stake key
+	cardano-cli stake-address registration-certificate \
+		--stake-verification-key-file $(POOL_KEY_DIR)/stake.vkey \
+		--out-file $(POOL_KEY_DIR)/stake.cert
+
+.PHONY: get-min-fee
+get-min-fee: ## gets minimum fee for the given tx input
+	cardano-cli transaction build-raw \
+		--tx-in $(txIn) \
+		--tx-out $(cat $(POOL_KEY_DIR)/payment.addr)+0 \
+		--invalid-hereafter 0 \
+		--fee 0 \
+		--out-file tx.raw \
+		--certificate-file $(POOL_KEY_DIR)/stake.cert
+	cardano-cli transaction calculate-min-fee \
+		--tx-body-file tx.raw \
+		--tx-in-count 1 \
+		--tx-out-count 1 \
+		--witness-count 1 \
+		--byron-witness-count 0 \
+		--$(NETWORK)$(NETWORK_PARAMETER) \
+		--protocol-params-file $(POOL_DIR)/protocol.json
