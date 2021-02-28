@@ -8,7 +8,7 @@ Type=simple
 Restart=always
 RestartSec=1
 User=root
-ExecStart=/usr/local/bin/Prometheus --web.max-connections=1 --config.file=PROMETHEUS_CONFIG_FILE
+ExecStart=/usr/local/bin/prometheus --web.max-connections=1 --config.file=PROMETHEUS_CONFIG_FILE
 
 [Install]
 WantedBy=multi-user.target
