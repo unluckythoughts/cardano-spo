@@ -1,13 +1,14 @@
 .ONESHELL:
 
 CARDANO_NODE_DOCKERFILE=$(PWD)/Dockerfile
-CARDANO_NODE_SERVICEFILE=$(PWD)/cardano-node.service
+CARDANO_NODE_SERVICEFILE=$(PWD)/services/cardano-node.service
+PROMETHEUS_SERVICEFILE=$(PWD)/services/prometheus.service
+PROMETHEUS_CONFIG_FILE=$(PWD)/prometheus.yml
 GHC_VERSION=8.10.2
 CABAL_VERSION=3.2.0.0
 LIBSODIUM_VERSION=66f017f1
 CARDANO_NODE_VERSION=1.25.1
 PROMETHEUS_VERSION=2.25.0
-NODE_EXPORTER_VERSION=1.1.1
 
 INSTALL_DIR=/usr/local/bin
 OS_ARCH=$(shell uname -m)
@@ -40,8 +41,10 @@ help: ## Print this help message
 update: ## update ubuntu and setup required dependencies
 	apt-get update
 	apt-get upgrade -y
-	apt-get install -y --no-install-recommends netbase jq libnuma-dev docker.io
+	apt-get install -y --no-install-recommends netbase jq libnuma-dev docker.io nginx
 	sudo systemctl start docker
+	sudo systemctl start nginx
+	sudo systemctl enable nginx
 
 .PHONY: build-cardano
 build-cardano: ## builds cardano node binaries in a docker
@@ -65,14 +68,6 @@ get-binary: ## move binaries built in docker to the local machine
 			mkdir -p /dist/lib/ && cp -r /usr/local/lib/lib* /dist/lib; \
 			mkdir -p /dist/lib/pkgconfig && cp -r /usr/local/lib/pkgconfig/lib* /dist/lib/pkgconfig"
 
-.PHONY: get-node-exporter
-get-node-exporter: ## install node exporter
-	wget -nc -q https://github.com/prometheus/node_exporter/releases/download/v$(NODE_EXPORTER_VERSION)/node_exporter-$(NODE_EXPORTER_VERSION).linux-amd64.tar.gz
-	tar xfz node_exporter-$(NODE_EXPORTER_VERSION).linux-amd64.tar.gz
-	cd node_exporter-$(NODE_EXPORTER_VERSION).linux-amd64
-	mv ./node_exporter /usr/local/bin/
-	cd .. && rm -rf node_exporter*
-
 .PHONY: get-prometheus
 get-prometheus: ## install prometheus
 	wget -nc -q https://github.com/prometheus/prometheus/releases/download/v$(PROMETHEUS_VERSION)/prometheus-$(PROMETHEUS_VERSION).linux-amd64.tar.gz
@@ -80,6 +75,15 @@ get-prometheus: ## install prometheus
 	cd prometheus-$(PROMETHEUS_VERSION).linux-amd64
 	mv ./prometheus /usr/local/bin/
 	cd .. && rm -rf prometheus*
+
+.PHONY: setup-prometheus
+setup-prometheus: ## setup prometheus service
+	@sed \
+		-e 's:PROMETHEUS_CONFIG_FILE:$(PROMETHEUS_CONFIG_FILE):g' \
+		$(PROMETHEUS_SERVICEFILE) > /etc/systemd/system/prometheus.service
+	sudo systemctl enable prometheus
+	sudo systemctl start prometheus
+	sudo systemctl status prometheus
 
 define get-config-files
 	@wget -nc -qP $(1) https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/testnet-config.json
@@ -94,8 +98,8 @@ define get-config-files
 	sed -i 's/\(TraceBlockFetchDecisions": \).*$$/\1true,/g' $(1)/testnet-config.json
 endef
 
-.PHONY: get-relay-config-files
-get-relay-config-files: ## download relay node config files
+.PHONY: get-relay-node-config-files
+get-relay-node-config-files: ## download relay node config files
 	@$(call get-config-files,$(RELAY_NODE_DIR))
 	[[ grep -c "CARDANO_NODE_SOCKET_PATH" -eq 0 ]] && \
 		export CARDANO_NODE_SOCKET_PATH=$(RELAY_NODE_DIR)/socket >> ~/.bashrc
@@ -107,14 +111,17 @@ get-relay-config-files: ## download relay node config files
       "valency":1/g' \
 		$(RELAY_NODE_DIR)/testnet-topology.json
 
-.PHONY: get-node-config-files
-get-node-config-files: ## download staking node config files
+.PHONY: get-staking-node-config-files
+get-staking-node-config-files: ## download staking node config files
 	@$(call get-config-files,$(STAKING_NODE_DIR))
 	sed -i \
 		-e 's/"addr": .*$$/"addr": "$(PUBLIC_IP)",/g' \
 		-e 's/"port": .*$$/"port": "$(RELAY_NODE_PORT)",/g' \
 		-e 's/"valency": .*$$/"valency": 1/g' \
 		$(STAKING_NODE_DIR)/testnet-topology.json
+	sed -i 's/12798/12799/g' $(1)/testnet-config.json
+	sed -i 's/12798/12799/g' $(1)/mainnet-config.json
+
 
 .PHONY: run-relay
 run-relay: ## run relay node in terminal

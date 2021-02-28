@@ -4,11 +4,11 @@ global:
     monitor: "codelab-monitor"
 
 scrape_configs:
-  - job_name: "cardano" # To scrape data from the cardano node
+  - job_name: "relay" # To scrape data from the cardano relay node
     scrape_interval: 5s
     static_configs:
       - targets: ["127.0.0.1:12798"]
-  - job_name: "node" # To scrape data from a node exporter to monitor your linux host metrics.
+  - job_name: "staking" # To scrape data from the cardano staking node
     scrape_interval: 5s
     static_configs:
-      - targets: ["127.0.0.1:9100"]
+      - targets: ["127.0.0.1:12799"]
