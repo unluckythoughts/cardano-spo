@@ -244,7 +244,7 @@ submit-tx: ## signes and submit the raw tx
 		--invalid-hereafter 987654 \
 		--fee $(fee) \
 		--out-file tx.raw \
-		--certificate-file stake.cert
+		--certificate-file $(POOL_KEY_DIR)/stake.cert
 	cardano-cli transaction sign \
 		--tx-body-file tx.raw \
 		--signing-key-file $(POOL_KEY_DIR)/payment.skey \
