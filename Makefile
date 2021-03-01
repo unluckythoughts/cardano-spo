@@ -241,7 +241,7 @@ submit-tx: ## signes and submit the raw tx
 	cardano-cli transaction build-raw \
 		--tx-in $(txIn) \
 		--tx-out $(shell cat $(POOL_KEY_DIR)/payment.addr)+$(remaining_amount) \
-		--invalid-hereafter 987654 \
+		--invalid-hereafter $(slot) \
 		--fee $(fee) \
 		--out-file tx.raw \
 		--certificate-file $(POOL_KEY_DIR)/stake.cert
