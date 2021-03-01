@@ -235,3 +235,22 @@ get-min-fee: ## gets minimum fee for the given tx input
 		--byron-witness-count 0 \
 		--$(NETWORK)$(NETWORK_PARAMETER) \
 		--protocol-params-file $(POOL_DIR)/protocol.json
+
+.PHONY: submit-tx
+submit-tx: ## signes and submit the raw tx
+	cardano-cli transaction build-raw \
+		--tx-in $(txIn) \
+		--tx-out $(shell cat $(POOL_KEY_DIR)/payment.addr)+$(remaining_amount) \
+		--invalid-hereafter 987654 \
+		--fee $(fee) \
+		--out-file tx.raw \
+		--certificate-file stake.cert
+	cardano-cli transaction sign \
+		--tx-body-file tx.raw \
+		--signing-key-file $(POOL_KEY_DIR)/payment.skey \
+		--signing-key-file $(POOL_KEY_DIR)/stake.skey \
+		--$(NETWORK)$(NETWORK_PARAMETER) \
+		--out-file tx.signed
+	cardano-cli transaction submit \
+		--tx-file tx.signed \
+		--$(NETWORK)$(NETWORK_PARAMETER)
