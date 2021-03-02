@@ -27,7 +27,7 @@ STAKING_NODE_DIR=$(POOL_DIR)/node
 STAKING_NODE_PORT=3002
 RELAY_NODE_PORT=3000
 
-CARDANO_NODE_SOCKET_PATH=$(RELAY_NODE_DIR)/socket
+export CARDANO_NODE_SOCKET_PATH=$(RELAY_NODE_DIR)/socket
 
 # help extracts the help texts for the comments following ': ##'
 .PHONY: help
@@ -221,7 +221,7 @@ generate-registration-certificate: ## get registration certificate for stake key
 .PHONY: get-min-fee
 get-min-fee: ## gets minimum fee for the given tx input
 	cardano-cli transaction build-raw \
-		 --mary-era \
+		--mary-era \
 		--tx-in $(txIn) \
 		--tx-out $(shell cat $(POOL_KEY_DIR)/payment.addr)+0 \
 		--invalid-hereafter 0 \
@@ -229,7 +229,6 @@ get-min-fee: ## gets minimum fee for the given tx input
 		--out-file tx.raw \
 		--certificate-file $(POOL_KEY_DIR)/stake.cert
 	cardano-cli transaction calculate-min-fee \
-		 --mary-era \
 		--tx-body-file tx.raw \
 		--tx-in-count 1 \
 		--tx-out-count 1 \
@@ -256,3 +255,18 @@ submit-tx: ## signes and submit the raw tx
 	cardano-cli transaction submit \
 		--tx-file tx.signed \
 		--$(NETWORK)$(NETWORK_PARAMETER)
+
+generate-stake-keys:
+	cardano-cli node key-gen \
+		--cold-verification-key-file cold.vkey \
+		--cold-signing-key-file cold.skey \
+		--operational-certificate-issue-counter-file cold.
+
+	cardano-cli node key-gen-VRF \
+		--verification-key-file vrf.vkey \
+		--signing-key-file vrf.skey
+
+	cardano-cli node key-gen-KES \
+		--verification-key-file kes.vkey \
+		--signing-key-file kes.skey
+
