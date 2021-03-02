@@ -272,7 +272,7 @@ generate-node-cert:
 		--kes-verification-key-file kes.vkey \
 		--cold-signing-key-file cold.skey \
 		--operational-certificate-issue-counter cold.counter \
-		--kes-period 120 \
+		--kes-period 156 \
 		--out-file node.cert
 
 generate-and-move-keys-to-server:
