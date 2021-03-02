@@ -287,7 +287,7 @@ generate-and-move-keys-to-server:
 .PHONY: generate-staking-hot-keys
 generate-staking-hot-keys: ## generate the VRF staking keys
 	cardano-cli node key-gen-VRF \
-		--verification-key-file vrf.vkey \
-		--signing-key-file vrf.skey
+		--verification-key-file $(POOL_KEY_DIR)/vrf.vkey \
+		--signing-key-file $(POOL_KEY_DIR)/vrf.skey
 
 
