@@ -142,6 +142,7 @@ setup-relay-node-service: ## setup relay node service and enable it to start on 
 		-e 's:NODE_DIR:$(RELAY_NODE_DIR):g' \
 		-e 's:NODE_PORT:$(RELAY_NODE_PORT):g' \
 		-e 's:NETWORK:$(NETWORK):g' \
+		-e 's:ADDITIONAL_PARAMS::g' \
 		$(CARDANO_NODE_SERVICEFILE) > /etc/systemd/system/cardano-relay-node.service
 	sudo systemctl enable cardano-relay-node
 
@@ -168,6 +169,7 @@ setup-staking-node-service: ## setup staking node service and enable it to start
 		-e 's:NODE_DIR:$(STAKING_NODE_DIR):g' \
 		-e 's:NODE_PORT:$(STAKING_NODE_PORT):g' \
 		-e 's:NETWORK:$(NETWORK):g' \
+		-e 's:ADDITIONAL_PARAMS:--shelley-kes-key $(POOL_KEY_DIR)/kes.skey --shelley-vrf-key $(POOL_KEY_DIR)/vrf.skey --shelley-operational-certificate $(POOL_KEY_DIR)/node.cert:g' \
 		$(CARDANO_NODE_SERVICEFILE) > /etc/systemd/system/cardano-staking-node.service
 	sudo systemctl enable cardano-staking-node
 
@@ -188,8 +190,7 @@ check-node-tip: ## check staking node tip
 
 .PHONY: get-balance
 get-payment-balance: ## get balance for payment address from relay node
-	@CARDANO_NODE_SOCKET_PATH=$(RELAY_NODE_DIR)/socket \
-	cardano-cli query utxo --mary-era \
+	@cardano-cli query utxo --mary-era \
 		--address $(shell cat $(POOL_KEY_DIR)/payment.addr) \
 		--$(NETWORK)$(NETWORK_PARAMETER)
 
@@ -260,8 +261,8 @@ local-sign-delegate-tx:
 		--invalid-hereafter $(slot) \
 		--fee $(fee) \
 		--out-file tx.raw \
-		--certificate-file $(POOL_KEY_DIR)/pool-registration.cert \
-		--certificate-file $(POOL_KEY_DIR)/delegation.cert
+		--certificate-file pool-registration.cert \
+		--certificate-file delegation.cert
 	cardano-cli transaction sign \
 		--tx-body-file tx.raw \
 		--signing-key-file payment.skey \
@@ -336,9 +337,16 @@ local-generate-stake-pool-certificate:
 		--cold-verification-key-file cold.vkey \
 		--out-file delegation.cert
 
+local-move-tx-to-server:
+	sftp do-cardano-spo << EOF
+	cd /root/cardano-spo
+	put tx.signed
+	quit
+	EOF
+
 local-move-keys-to-server:
 	sftp do-cardano-spo << EOF
-	cd /root/cardano-spo/pool/wallet
+	cd /root/cardano-spo/
 	put payment.skey
 	put payment.vkey
 	put payment.addr

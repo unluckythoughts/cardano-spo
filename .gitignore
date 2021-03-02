@@ -7,3 +7,5 @@
 **/*key
 **/*.counter
 **/*.cert
+**/*.raw
+**/*.signed
