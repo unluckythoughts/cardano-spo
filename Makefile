@@ -27,6 +27,8 @@ STAKING_NODE_DIR=$(POOL_DIR)/node
 STAKING_NODE_PORT=3002
 RELAY_NODE_PORT=3000
 
+CARDANO_NODE_SOCKET_PATH=$(RELAY_NODE_DIR)/socket
+
 # help extracts the help texts for the comments following ': ##'
 .PHONY: help
 help: ## Print this help message
@@ -153,12 +155,10 @@ stop-relay-node: ## stop relay node service
 
 .PHONY: check-relay-tip
 check-relay-tip: ## check relay node tip
-	@CARDANO_NODE_SOCKET_PATH=$(RELAY_NODE_DIR)/socket \
-		cardano-cli query tip --$(NETWORK)$(NETWORK_PARAMETER) | jq
-	CARDANO_NODE_SOCKET_PATH=$(RELAY_NODE_DIR)/socket \
-		cardano-cli query protocol-parameters --mary-era \
-			--$(NETWORK)$(NETWORK_PARAMETER) \
-			--out-file $(POOL_DIR)/protocol.json
+	@cardano-cli query tip --$(NETWORK)$(NETWORK_PARAMETER) | jq
+	cardano-cli query protocol-parameters --mary-era \
+		--$(NETWORK)$(NETWORK_PARAMETER) \
+		--out-file $(POOL_DIR)/protocol.json
 
 .PHONY: setup-staking-node-service
 setup-staking-node-service: ## setup staking node service and enable it to start on restart
