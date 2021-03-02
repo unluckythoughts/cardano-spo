@@ -123,8 +123,8 @@ get-staking-node-config-files: ## download staking node config files
 		-e 's/"port": .*$$/"port": "$(RELAY_NODE_PORT)",/g' \
 		-e 's/"valency": .*$$/"valency": 1/g' \
 		$(STAKING_NODE_DIR)/testnet-topology.json
-	sed -i 's/12798/12799/g' $(1)/testnet-config.json
-	sed -i 's/12798/12799/g' $(1)/mainnet-config.json
+	sed -i 's/12798/12799/g' $(STAKING_NODE_DIR)/testnet-config.json
+	sed -i 's/12798/12799/g' $(STAKING_NODE_DIR)/mainnet-config.json
 
 
 .PHONY: run-relay
