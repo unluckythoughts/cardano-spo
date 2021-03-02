@@ -221,6 +221,7 @@ generate-registration-certificate: ## get registration certificate for stake key
 .PHONY: get-min-fee
 get-min-fee: ## gets minimum fee for the given tx input
 	cardano-cli transaction build-raw \
+		 --mary-era \
 		--tx-in $(txIn) \
 		--tx-out $(shell cat $(POOL_KEY_DIR)/payment.addr)+0 \
 		--invalid-hereafter 0 \
@@ -228,6 +229,7 @@ get-min-fee: ## gets minimum fee for the given tx input
 		--out-file tx.raw \
 		--certificate-file $(POOL_KEY_DIR)/stake.cert
 	cardano-cli transaction calculate-min-fee \
+		 --mary-era \
 		--tx-body-file tx.raw \
 		--tx-in-count 1 \
 		--tx-out-count 1 \
