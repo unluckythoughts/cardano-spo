@@ -105,8 +105,6 @@ endef
 .PHONY: get-relay-node-config-files
 get-relay-node-config-files: ## download relay node config files
 	@$(call get-config-files,$(RELAY_NODE_DIR))
-	[[ grep -c "CARDANO_NODE_SOCKET_PATH" ~/.bashrc -eq 0 ]] && \
-		export CARDANO_NODE_SOCKET_PATH=$(RELAY_NODE_DIR)/socket >> ~/.bashrc
 	[[ grep -c $(PUBLIC_IP) $(RELAY_NODE_DIR)/testnet-topology.json -eq 0 ]] && sed -i \
 		's/\("valency": 2\)/\1 \
     },{ \
@@ -123,8 +121,14 @@ get-staking-node-config-files: ## download staking node config files
 		-e 's/"port": .*$$/"port": $(RELAY_NODE_PORT),/g' \
 		-e 's/"valency": .*$$/"valency": 1/g' \
 		$(STAKING_NODE_DIR)/testnet-topology.json
-	sed -i 's/12798/12799/g' $(STAKING_NODE_DIR)/testnet-config.json
-	sed -i 's/12798/12799/g' $(STAKING_NODE_DIR)/mainnet-config.json
+	sed -i \
+		-e 's/12798/12799/g' \
+		-e 's/12788/12789/g' \
+		$(STAKING_NODE_DIR)/testnet-config.json
+	sed -i \
+		-e 's/12798/12799/g' \
+		-e 's/12788/12789/g' \
+		$(STAKING_NODE_DIR)/mainnet-config.json
 
 
 .PHONY: run-relay
