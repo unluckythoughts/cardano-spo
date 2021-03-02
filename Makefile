@@ -246,8 +246,7 @@ submit-stake-tx: ## signes and submit the raw tx
 get-delegate-min-fee: ## gets minimum fee for the given tx input
 	cardano-cli transaction build-raw \
 		--mary-era \
-		--tx-in $(txIn1) \
-		--tx-in $(txIn2) \
+		--tx-in $(txIn) \
 		--tx-out $(shell cat $(POOL_KEY_DIR)/payment.addr)+0 \
 		--invalid-hereafter 0 \
 		--fee 0 \
@@ -265,8 +264,7 @@ get-delegate-min-fee: ## gets minimum fee for the given tx input
 
 local-sign-delegate-tx:
 	cardano-cli transaction build-raw \
-		--tx-in $(txIn1) \
-		--tx-in $(txIn2) \
+		--tx-in $(txIn) \
 		--tx-out $(shell cat payment.addr)+$(remaining_amount) \
 		--invalid-hereafter $(slot) \
 		--fee $(fee) \
@@ -339,13 +337,16 @@ local-generate-stake-pool-certificate:
 		--$(NETWORK)$(NETWORK_PARAMETER) \
 		--pool-relay-ipv4 $(PUBLIC_IP) \
 		--pool-relay-port $(RELAY_NODE_PORT) \
-		--metadata-url https://git.io/JJWdJ \
+		--metadata-url $(url) \
 		--metadata-hash $(metadata_hash) \
 		--out-file pool-registration.cert
 	cardano-cli stake-address delegation-certificate \
 		--stake-verification-key-file stake.vkey \
 		--cold-verification-key-file cold.vkey \
 		--out-file delegation.cert
+
+local-get-stake-pool-id:
+	cardano-cli stake-pool id --cold-verification-key-file cold.vkey
 
 local-move-tx-to-server:
 	sftp do-cardano-spo << EOF
