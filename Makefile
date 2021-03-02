@@ -173,13 +173,13 @@ setup-staking-node-service: ## setup staking node service and enable it to start
 		$(CARDANO_NODE_SERVICEFILE) > /etc/systemd/system/cardano-staking-node.service
 	sudo systemctl enable cardano-staking-node
 
-.PHONY: start-staking-node-node
-start-staking-node-node: ## start staking node service
+.PHONY: start-staking-node
+start-staking-node: ## start staking node service
 	@sudo systemctl start cardano-staking-node
 	sudo systemctl status cardano-staking-node
 
-.PHONY: stop-staking-node-node
-stop-staking-node-node: ## stop staking node service
+.PHONY: stop-staking-node
+stop-staking-node: ## stop staking node service
 	@sudo systemctl stop cardano-staking-node
 	sudo systemctl status cardano-staking-node
 
