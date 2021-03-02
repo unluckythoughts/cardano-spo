@@ -240,7 +240,7 @@ get-delegate-min-fee: ## gets minimum fee for the given tx input
 		--invalid-hereafter 0 \
 		--fee 0 \
 		--out-file tx.raw \
-		--certificate-file $(POOL_KEY_DIR)/pool-registration.cert
+		--certificate-file $(POOL_KEY_DIR)/pool-registration.cert \
 		--certificate-file $(POOL_KEY_DIR)/delegation.cert
 	cardano-cli transaction calculate-min-fee \
 		--tx-body-file tx.raw \
@@ -258,7 +258,8 @@ local-sign-delegate-tx:
 		--invalid-hereafter $(slot) \
 		--fee $(fee) \
 		--out-file tx.raw \
-		--certificate-file stake.cert
+		--certificate-file $(POOL_KEY_DIR)/pool-registration.cert \
+		--certificate-file $(POOL_KEY_DIR)/delegation.cert
 	cardano-cli transaction sign \
 		--tx-body-file tx.raw \
 		--signing-key-file payment.skey \
