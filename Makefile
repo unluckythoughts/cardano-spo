@@ -105,9 +105,9 @@ endef
 .PHONY: get-relay-node-config-files
 get-relay-node-config-files: ## download relay node config files
 	@$(call get-config-files,$(RELAY_NODE_DIR))
-	[[ grep -c "CARDANO_NODE_SOCKET_PATH" -eq 0 ]] && \
+	[[ grep -c "CARDANO_NODE_SOCKET_PATH" ~/.bashrc -eq 0 ]] && \
 		export CARDANO_NODE_SOCKET_PATH=$(RELAY_NODE_DIR)/socket >> ~/.bashrc
-	sed -i \
+	[[ grep -c $(PUBLIC_IP) $(RELAY_NODE_DIR)/testnet-topology.json -eq 0 ]] && sed -i \
 		's/\("valency": 2\)/\1 \
     },{ \
       "addr": "$(PUBLIC_IP)", \
@@ -120,7 +120,7 @@ get-staking-node-config-files: ## download staking node config files
 	@$(call get-config-files,$(STAKING_NODE_DIR))
 	sed -i \
 		-e 's/"addr": .*$$/"addr": "$(PUBLIC_IP)",/g' \
-		-e 's/"port": .*$$/"port": "$(RELAY_NODE_PORT)",/g' \
+		-e 's/"port": .*$$/"port": $(RELAY_NODE_PORT),/g' \
 		-e 's/"valency": .*$$/"valency": 1/g' \
 		$(STAKING_NODE_DIR)/testnet-topology.json
 	sed -i 's/12798/12799/g' $(STAKING_NODE_DIR)/testnet-config.json
@@ -142,9 +142,11 @@ setup-relay-node-service: ## setup relay node service and enable it to start on 
 		-e 's:NAME:Cardano Relay Node Service:g' \
 		-e 's:NODE_DIR:$(RELAY_NODE_DIR):g' \
 		-e 's:NODE_PORT:$(RELAY_NODE_PORT):g' \
+		-e 's:PUBLIC_IP:$(PUBLIC_IP):g' \
 		-e 's:NETWORK:$(NETWORK):g' \
 		-e 's:ADDITIONAL_PARAMS::g' \
 		$(CARDANO_NODE_SERVICEFILE) > /etc/systemd/system/cardano-relay-node.service
+	sudo systemctl daemon-reload
 	sudo systemctl enable cardano-relay-node
 
 .PHONY: start-relay-node
@@ -170,9 +172,11 @@ setup-staking-node-service: ## setup staking node service and enable it to start
 		-e 's:NAME:Cardano Block Producing Node Service:g' \
 		-e 's:NODE_DIR:$(STAKING_NODE_DIR):g' \
 		-e 's:NODE_PORT:$(STAKING_NODE_PORT):g' \
+		-e 's:PUBLIC_IP:$(PUBLIC_IP):g' \
 		-e 's:NETWORK:$(NETWORK):g' \
 		-e 's:ADDITIONAL_PARAMS:--shelley-kes-key $(POOL_KEY_DIR)/kes.skey --shelley-vrf-key $(POOL_KEY_DIR)/vrf.skey --shelley-operational-certificate $(POOL_KEY_DIR)/node.cert:g' \
 		$(CARDANO_NODE_SERVICEFILE) > /etc/systemd/system/cardano-staking-node.service
+	sudo systemctl daemon-reload
 	sudo systemctl enable cardano-staking-node
 
 .PHONY: start-staking-node
@@ -372,3 +376,16 @@ local-get-keys-from-server:
 	get vrf.vkey
 	quit
 	EOF
+
+
+
+/usr/local/bin/cardano-node run \
+	--topology /root/cardano-spo/pool/node/testnet-topology.json \
+	--database-path /root/cardano-spo/pool/node/db \
+	--socket-path /root/cardano-spo/pool/node/socket \
+	--config /root/cardano-spo/pool/node/testnet-config.json \
+	--port 3002 \
+	--shelley-kes-key /root/cardano-spo/pool/wallet/kes.skey \
+	--shelley-vrf-key /root/cardano-spo/pool/wallet/vrf.skey \
+	--shelley-operational-certificate /root/cardano-spo/pool/wallet/node.cert
+

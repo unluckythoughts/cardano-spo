@@ -8,7 +8,7 @@ Type=simple
 Restart=always
 RestartSec=1
 User=root
-ExecStart=/usr/local/bin/cardano-node run --topology NODE_DIR/NETWORK-topology.json --database-path NODE_DIR/db --socket-path NODE_DIR/socket --config NODE_DIR/NETWORK-config.json --port NODE_PORT ADDITIONAL_PARAMS
+ExecStart=/usr/local/bin/cardano-node run --topology NODE_DIR/NETWORK-topology.json --database-path NODE_DIR/db --socket-path NODE_DIR/socket --host-addr PUBLIC_IP --config NODE_DIR/NETWORK-config.json --port NODE_PORT ADDITIONAL_PARAMS
 
 [Install]
 WantedBy=multi-user.target
