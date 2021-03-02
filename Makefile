@@ -235,7 +235,8 @@ submit-stake-tx: ## signes and submit the raw tx
 get-delegate-min-fee: ## gets minimum fee for the given tx input
 	cardano-cli transaction build-raw \
 		--mary-era \
-		--tx-in $(txIn) \
+		--tx-in $(txIn1) \
+		--tx-in $(txIn2) \
 		--tx-out $(shell cat $(POOL_KEY_DIR)/payment.addr)+0 \
 		--invalid-hereafter 0 \
 		--fee 0 \
@@ -253,7 +254,8 @@ get-delegate-min-fee: ## gets minimum fee for the given tx input
 
 local-sign-delegate-tx:
 	cardano-cli transaction build-raw \
-		--tx-in $(txIn) \
+		--tx-in $(txIn1) \
+		--tx-in $(txIn2) \
 		--tx-out $(shell cat payment.addr)+$(remaining_amount) \
 		--invalid-hereafter $(slot) \
 		--fee $(fee) \
