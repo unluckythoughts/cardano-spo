@@ -3,6 +3,7 @@
 
 **/*.skey
 **/*.vkey
+**/*.addr
 **/*key
 **/*.counter
 **/*.cert

@@ -10,7 +10,7 @@ LIBSODIUM_VERSION=66f017f1
 CARDANO_NODE_VERSION=1.25.1
 PROMETHEUS_VERSION=2.25.0
 
-INSTALL_DIR=~/.local/bin
+INSTALL_DIR=/usr/local/
 OS_ARCH=$(shell uname -m)
 
 # NETWORK=mainnet
@@ -28,8 +28,8 @@ STAKING_NODE_PORT=3002
 RELAY_NODE_PORT=3000
 
 export CARDANO_NODE_SOCKET_PATH=$(RELAY_NODE_DIR)/socket
-export LD_LIBRARY_PATH=$(INSTALL_DIR)
-export PKG_CONFIG_PATH=$(INSTALL_DIR)/pkgconfig
+export LD_LIBRARY_PATH=/usr/local/lib
+export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
 
 # help extracts the help texts for the comments following ': ##'
 .PHONY: help
@@ -186,27 +186,6 @@ check-node-tip: ## check staking node tip
 	@CARDANO_NODE_SOCKET_PATH=$(STAKING_NODE_DIR)/socket \
 	cardano-cli query tip --$(NETWORK)$(NETWORK_PARAMETER) | jq
 
-.PHONY: generate-keys
-generate-keys: ## generate payment and staking keys
-	@cardano-cli address key-gen \
-		--verification-key-file $(POOL_KEY_DIR)/payment.vkey \
-		--signing-key-file $(POOL_KEY_DIR)/payment.skey
-	cardano-cli stake-address key-gen \
-		--verification-key-file $(POOL_KEY_DIR)/stake.vkey \
-		--signing-key-file $(POOL_KEY_DIR)/stake.skey
-
-.PHONY: get-addresses
-get-addresses: ## generate payment and staking addresses
-	@cardano-cli address build \
-		--payment-verification-key-file $(POOL_KEY_DIR)/payment.vkey \
-		--stake-verification-key-file $(POOL_KEY_DIR)/stake.vkey \
-		--out-file $(POOL_KEY_DIR)/payment.addr \
-		--$(NETWORK)$(NETWORK_PARAMETER)
-	cardano-cli stake-address build \
-		--stake-verification-key-file $(POOL_KEY_DIR)/stake.vkey \
-		--out-file $(POOL_KEY_DIR)/stake.addr \
-		--$(NETWORK)$(NETWORK_PARAMETER)
-
 .PHONY: get-balance
 get-payment-balance: ## get balance for payment address from relay node
 	@CARDANO_NODE_SOCKET_PATH=$(RELAY_NODE_DIR)/socket \
@@ -214,14 +193,8 @@ get-payment-balance: ## get balance for payment address from relay node
 		--address $(shell cat $(POOL_KEY_DIR)/payment.addr) \
 		--$(NETWORK)$(NETWORK_PARAMETER)
 
-.PHONY: generate-registration-certificate
-generate-registration-certificate: ## get registration certificate for stake key
-	cardano-cli stake-address registration-certificate \
-		--stake-verification-key-file $(POOL_KEY_DIR)/stake.vkey \
-		--out-file $(POOL_KEY_DIR)/stake.cert
-
 .PHONY: get-min-fee
-get-min-fee: ## gets minimum fee for the given tx input
+get-stake-min-fee: ## gets minimum fee for the given tx input
 	cardano-cli transaction build-raw \
 		--mary-era \
 		--tx-in $(txIn) \
@@ -240,7 +213,7 @@ get-min-fee: ## gets minimum fee for the given tx input
 		--protocol-params-file $(POOL_DIR)/protocol.json
 
 .PHONY: submit-tx
-submit-tx: ## signes and submit the raw tx
+submit-stake-tx: ## signes and submit the raw tx
 	cardano-cli transaction build-raw \
 		--tx-in $(txIn) \
 		--tx-out $(shell cat $(POOL_KEY_DIR)/payment.addr)+$(remaining_amount) \
@@ -258,16 +231,78 @@ submit-tx: ## signes and submit the raw tx
 		--tx-file tx.signed \
 		--$(NETWORK)$(NETWORK_PARAMETER)
 
-generate-staking-cold-keys:
+.PHONY: get-min-fee
+get-delegate-min-fee: ## gets minimum fee for the given tx input
+	cardano-cli transaction build-raw \
+		--mary-era \
+		--tx-in $(txIn) \
+		--tx-out $(shell cat $(POOL_KEY_DIR)/payment.addr)+0 \
+		--invalid-hereafter 0 \
+		--fee 0 \
+		--out-file tx.raw \
+		--certificate-file $(POOL_KEY_DIR)/pool-registration.cert
+		--certificate-file $(POOL_KEY_DIR)/delegation.cert
+	cardano-cli transaction calculate-min-fee \
+		--tx-body-file tx.raw \
+		--tx-in-count 1 \
+		--tx-out-count 1 \
+		--witness-count 1 \
+		--byron-witness-count 0 \
+		--$(NETWORK)$(NETWORK_PARAMETER) \
+		--protocol-params-file $(POOL_DIR)/protocol.json
+
+local-sign-delegate-tx:
+	cardano-cli transaction build-raw \
+		--tx-in $(txIn) \
+		--tx-out $(shell cat payment.addr)+$(remaining_amount) \
+		--invalid-hereafter $(slot) \
+		--fee $(fee) \
+		--out-file tx.raw \
+		--certificate-file stake.cert
+	cardano-cli transaction sign \
+		--tx-body-file tx.raw \
+		--signing-key-file payment.skey \
+		--signing-key-file stake.skey \
+		--signing-key-file cold.skey \
+		--$(NETWORK)$(NETWORK_PARAMETER) \
+		--out-file tx.signed
+
+submit-delegate-tx:
+	cardano-cli transaction submit \
+		--tx-file tx.signed \
+		--$(NETWORK)$(NETWORK_PARAMETER)
+
+local-generate-wallet-keys:
+	@cardano-cli address key-gen \
+		--verification-key-file payment.vkey \
+		--signing-key-file payment.skey
+	cardano-cli stake-address key-gen \
+		--verification-key-file stake.vkey \
+		--signing-key-file stake.skey
+	cardano-cli address build \
+		--payment-verification-key-file payment.vkey \
+		--stake-verification-key-file stake.vkey \
+		--out-file payment.addr \
+		--$(NETWORK)$(NETWORK_PARAMETER)
+	cardano-cli stake-address build \
+		--stake-verification-key-file stake.vkey \
+		--out-file stake.addr \
+		--$(NETWORK)$(NETWORK_PARAMETER)
+	cardano-cli stake-address registration-certificate \
+		--stake-verification-key-file stake.vkey \
+		--out-file stake.cert
+
+local-generate-staking-keys:
 	cardano-cli node key-gen \
 		--cold-verification-key-file cold.vkey \
 		--cold-signing-key-file cold.skey \
 		--operational-certificate-issue-counter-file cold.counter
+	cardano-cli node key-gen-VRF \
+		--verification-key-file vrf.vkey \
+		--signing-key-file vrf.skey
 	cardano-cli node key-gen-KES \
 		--verification-key-file kes.vkey \
 		--signing-key-file kes.skey
-
-generate-node-cert:
 	cardano-cli node issue-op-cert \
 		--kes-verification-key-file kes.vkey \
 		--cold-signing-key-file cold.skey \
@@ -275,19 +310,52 @@ generate-node-cert:
 		--kes-period 156 \
 		--out-file node.cert
 
-generate-and-move-keys-to-server:
+local-get-metadata-hash:
+	cardano-cli stake-pool metadata-hash --pool-metadata-file $(file)
+
+local-generate-stake-pool-certificate:
+	cardano-cli stake-pool registration-certificate \
+		--cold-verification-key-file cold.vkey \
+		--vrf-verification-key-file vrf.vkey \
+		--pool-pledge 1000000000 \
+		--pool-cost 340000000 \
+		--pool-margin 0.01 \
+		--pool-reward-account-verification-key-file stake.vkey \
+		--pool-owner-stake-verification-key-file stake.vkey \
+		--$(NETWORK)$(NETWORK_PARAMETER) \
+		--pool-relay-ipv4 $(PUBLIC_IP) \
+		--pool-relay-port $(RELAY_NODE_PORT) \
+		--metadata-url https://git.io/JJWdJ \
+		--metadata-hash $(metadata_hash) \
+		--out-file pool-registration.cert
+	cardano-cli stake-address delegation-certificate \
+		--stake-verification-key-file stake.vkey \
+		--cold-verification-key-file cold.vkey \
+		--out-file delegation.cert
+
+local-move-keys-to-server:
 	sftp do-cardano-spo << EOF
 	cd /root/cardano-spo/pool/wallet
+	put payment.skey
+	put payment.vkey
+	put payment.addr
+	put stake.skey
+	put stake.vkey
+	put stake.addr
+	put vrf.skey
+	put vrf.vkey
 	put kes.skey
 	put kes.vkey
 	put node.cert
+	put pool-registration.cert
+	put delegation.cert
 	quit
 	EOF
 
-.PHONY: generate-staking-hot-keys
-generate-staking-hot-keys: ## generate the VRF staking keys
-	cardano-cli node key-gen-VRF \
-		--verification-key-file $(POOL_KEY_DIR)/vrf.vkey \
-		--signing-key-file $(POOL_KEY_DIR)/vrf.skey
-
-
+local-get-keys-from-server:
+	sftp do-cardano-spo << EOF
+	cd /root/cardano-spo/pool/wallet
+	get vrf.skey
+	get vrf.vkey
+	quit
+	EOF
