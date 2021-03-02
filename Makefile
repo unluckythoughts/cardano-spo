@@ -10,7 +10,7 @@ LIBSODIUM_VERSION=66f017f1
 CARDANO_NODE_VERSION=1.25.1
 PROMETHEUS_VERSION=2.25.0
 
-INSTALL_DIR=/usr/local/bin
+INSTALL_DIR=~/.local/bin
 OS_ARCH=$(shell uname -m)
 
 # NETWORK=mainnet
@@ -28,6 +28,8 @@ STAKING_NODE_PORT=3002
 RELAY_NODE_PORT=3000
 
 export CARDANO_NODE_SOCKET_PATH=$(RELAY_NODE_DIR)/socket
+export LD_LIBRARY_PATH=$(INSTALL_DIR)
+export PKG_CONFIG_PATH=$(INSTALL_DIR)/pkgconfig
 
 # help extracts the help texts for the comments following ': ##'
 .PHONY: help
@@ -256,17 +258,36 @@ submit-tx: ## signes and submit the raw tx
 		--tx-file tx.signed \
 		--$(NETWORK)$(NETWORK_PARAMETER)
 
-generate-stake-keys:
+generate-staking-cold-keys:
 	cardano-cli node key-gen \
 		--cold-verification-key-file cold.vkey \
 		--cold-signing-key-file cold.skey \
-		--operational-certificate-issue-counter-file cold.
+		--operational-certificate-issue-counter-file cold.counter
+	cardano-cli node key-gen-KES \
+		--verification-key-file kes.vkey \
+		--signing-key-file kes.skey
 
+generate-node-cert:
+	cardano-cli node issue-op-cert \
+		--kes-verification-key-file kes.vkey \
+		--cold-signing-key-file cold.skey \
+		--operational-certificate-issue-counter cold.counter \
+		--kes-period 120 \
+		--out-file node.cert
+
+generate-and-move-keys-to-server:
+	sftp do-cardano-spo << EOF
+	cd /root/cardano-spo/pool/wallet
+	put kes.skey
+	put kes.vkey
+	put node.cert
+	quit
+	EOF
+
+.PHONY: generate-staking-hot-keys
+generate-staking-hot-keys: ## generate the VRF staking keys
 	cardano-cli node key-gen-VRF \
 		--verification-key-file vrf.vkey \
 		--signing-key-file vrf.skey
 
-	cardano-cli node key-gen-KES \
-		--verification-key-file kes.vkey \
-		--signing-key-file kes.skey
 

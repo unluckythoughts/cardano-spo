@@ -1,2 +1,8 @@
 **/pools
 **/pool
+
+**/*.skey
+**/*.vkey
+**/*key
+**/*.counter
+**/*.cert
