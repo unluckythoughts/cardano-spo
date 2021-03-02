@@ -1,5 +1,5 @@
 [Unit]
-Description=Cardano relay node
+Description=NAME
 After=network.target
 StartLimitIntervalSec=0
 

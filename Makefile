@@ -139,6 +139,7 @@ run-relay: ## run relay node in terminal
 .PHONY: setup-relay-node-service
 setup-relay-node-service: ## setup relay node service and enable it to start on restart
 	@sed \
+		-e 's:NAME:Cardano Relay Node Service:g' \
 		-e 's:NODE_DIR:$(RELAY_NODE_DIR):g' \
 		-e 's:NODE_PORT:$(RELAY_NODE_PORT):g' \
 		-e 's:NETWORK:$(NETWORK):g' \
@@ -166,6 +167,7 @@ check-relay-tip: ## check relay node tip
 .PHONY: setup-staking-node-service
 setup-staking-node-service: ## setup staking node service and enable it to start on restart
 	@sed \
+		-e 's:NAME:Cardano Block Producing Node Service:g' \
 		-e 's:NODE_DIR:$(STAKING_NODE_DIR):g' \
 		-e 's:NODE_PORT:$(STAKING_NODE_PORT):g' \
 		-e 's:NETWORK:$(NETWORK):g' \
