@@ -376,16 +376,3 @@ local-get-keys-from-server:
 	get vrf.vkey
 	quit
 	EOF
-
-
-
-/usr/local/bin/cardano-node run \
-	--topology /root/cardano-spo/pool/node/testnet-topology.json \
-	--database-path /root/cardano-spo/pool/node/db \
-	--socket-path /root/cardano-spo/pool/node/socket \
-	--config /root/cardano-spo/pool/node/testnet-config.json \
-	--port 3002 \
-	--shelley-kes-key /root/cardano-spo/pool/wallet/kes.skey \
-	--shelley-vrf-key /root/cardano-spo/pool/wallet/vrf.skey \
-	--shelley-operational-certificate /root/cardano-spo/pool/wallet/node.cert
-
