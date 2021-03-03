@@ -207,7 +207,7 @@ local-pool-deregister:
 		--epoch 118 \
 		--out-file pool.deregistration.cert
 
-local-generate-wallet-keys:
+local-generate-keys:
 	@mkdir -p $(LOCAL_KEY_DIR)
 	cardano-cli address key-gen \
 		--verification-key-file $(LOCAL_KEY_DIR)/payment.vkey \
@@ -227,9 +227,7 @@ local-generate-wallet-keys:
 	cardano-cli stake-address registration-certificate \
 		--stake-verification-key-file $(LOCAL_KEY_DIR)/stake.vkey \
 		--out-file $(LOCAL_KEY_DIR)/stake.cert
-
-local-generate-staking-keys:
-	@cardano-cli node key-gen \
+	cardano-cli node key-gen \
 		--cold-verification-key-file $(LOCAL_KEY_DIR)/cold.vkey \
 		--cold-signing-key-file $(LOCAL_KEY_DIR)/cold.skey \
 		--operational-certificate-issue-counter-file $(LOCAL_KEY_DIR)/cold.counter
@@ -253,7 +251,7 @@ local-generate-stake-pool-certificate:
 	cardano-cli stake-pool registration-certificate \
 		--cold-verification-key-file $(LOCAL_KEY_DIR)/cold.vkey \
 		--vrf-verification-key-file $(LOCAL_KEY_DIR)/vrf.vkey \
-		--pool-pledge 1000000000 \
+		--pool-pledge 100000000 \
 		--pool-cost 340000000 \
 		--pool-margin 0.01 \
 		--pool-reward-account-verification-key-file $(LOCAL_KEY_DIR)/stake.vkey \
@@ -282,20 +280,34 @@ local-move-tx-to-server:
 local-move-keys-to-server:
 	cd $(LOCAL_KEY_DIR) && sftp do-cardano-spo << EOF
 	cd /root/cardano-spo/pool/wallet
+	rm payment.skey
 	put payment.skey
+	rm payment.vkey
 	put payment.vkey
+	rm payment.addr
 	put payment.addr
+	rm stake.skey
 	put stake.skey
+	rm stake.vkey
 	put stake.vkey
+	rm stake.addr
 	put stake.addr
+	rm stake.cert
 	put stake.cert
 	cd /root/cardano-spo/pool/node/keys
+	rm vrf.skey
 	put vrf.skey
+	rm vrf.vkey
 	put vrf.vkey
+	rm kes.skey
 	put kes.skey
+	rm kes.vkey
 	put kes.vkey
+	rm node.cert
 	put node.cert
+	rm pool-registration.cert
 	put pool-registration.cert
+	rm delegation.cert
 	put delegation.cert
 	quit
 	EOF
@@ -362,4 +374,4 @@ local-sign-delegate-tx:
 		$(remaining_amount),$(slot),$(fee))
 
 check-pool-created:
-	cardano-cli query ledger-state --mary-era --testnet-magic 1097911063 | grep $(pool_id)
+	cardano-cli query ledger-state --mary-era --$(NETWORK)$(NETWORK_PARAMETER) | grep $(pool_id)
