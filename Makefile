@@ -362,4 +362,4 @@ local-sign-delegate-tx:
 		$(remaining_amount),$(slot),$(fee))
 
 check-pool-created:
-	cardano-cli query ledger-state --testnet-magic 1097911063 | grep $(pool_id)
+	cardano-cli query ledger-state --mary-era --testnet-magic 1097911063 | grep $(pool_id)
