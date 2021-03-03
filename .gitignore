@@ -1,5 +1,6 @@
 **/pools
 **/pool
+**/keys
 
 **/*.skey
 **/*.vkey
