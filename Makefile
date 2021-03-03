@@ -130,16 +130,6 @@ get-staking-node-config-files: ## download staking node config files
 		-e 's/12788/12789/g' \
 		$(STAKING_NODE_DIR)/mainnet-config.json
 
-
-.PHONY: run-relay
-run-relay: ## run relay node in terminal
-	@cardano-node run \
-		--topology $(RELAY_NODE_DIR)/$(NETWORK)-topology.json \
-		--database-path $(RELAY_NODE_DIR)/db \
-		--socket-path $(RELAY_NODE_DIR)/socket \
-		--config $(RELAY_NODE_DIR)/$(NETWORK)-config.json \
-		--port $(RELAY_NODE_PORT)
-
 .PHONY: setup-relay-node-service
 setup-relay-node-service: ## setup relay node service and enable it to start on restart
 	@sed \
@@ -204,85 +194,17 @@ get-payment-balance: ## get balance for payment address from relay node
 		--address $(shell cat $(POOL_KEY_DIR)/payment.addr) \
 		--$(NETWORK)$(NETWORK_PARAMETER)
 
-.PHONY: get-min-fee
-get-stake-min-fee: ## gets minimum fee for the given tx input
-	cardano-cli transaction build-raw \
-		--mary-era \
-		--tx-in $(txIn) \
-		--tx-out $(shell cat $(POOL_KEY_DIR)/payment.addr)+0 \
-		--invalid-hereafter 0 \
-		--fee 0 \
-		--out-file tx.raw \
-		--certificate-file $(POOL_KEY_DIR)/stake.cert
-	cardano-cli transaction calculate-min-fee \
-		--tx-body-file tx.raw \
-		--tx-in-count 1 \
-		--tx-out-count 1 \
-		--witness-count 1 \
-		--byron-witness-count 0 \
-		--$(NETWORK)$(NETWORK_PARAMETER) \
-		--protocol-params-file $(POOL_DIR)/protocol.json
-
 .PHONY: submit-tx
-submit-stake-tx: ## signes and submit the raw tx
-	cardano-cli transaction build-raw \
-		--tx-in $(txIn) \
-		--tx-out $(shell cat $(POOL_KEY_DIR)/payment.addr)+$(remaining_amount) \
-		--invalid-hereafter $(slot) \
-		--fee $(fee) \
-		--out-file tx.raw \
-		--certificate-file $(POOL_KEY_DIR)/stake.cert
-	cardano-cli transaction sign \
-		--tx-body-file tx.raw \
-		--signing-key-file $(POOL_KEY_DIR)/payment.skey \
-		--signing-key-file $(POOL_KEY_DIR)/stake.skey \
-		--$(NETWORK)$(NETWORK_PARAMETER) \
-		--out-file tx.signed
+submit-tx: ## submits the signed transaction to the network
 	cardano-cli transaction submit \
 		--tx-file tx.signed \
 		--$(NETWORK)$(NETWORK_PARAMETER)
 
-.PHONY: get-min-fee
-get-delegate-min-fee: ## gets minimum fee for the given tx input
-	cardano-cli transaction build-raw \
-		--mary-era \
-		--tx-in $(txIn) \
-		--tx-out $(shell cat $(POOL_KEY_DIR)/payment.addr)+0 \
-		--invalid-hereafter 0 \
-		--fee 0 \
-		--out-file tx.raw \
-		--certificate-file $(POOL_KEY_DIR)/pool-registration.cert \
-		--certificate-file $(POOL_KEY_DIR)/delegation.cert
-	cardano-cli transaction calculate-min-fee \
-		--tx-body-file tx.raw \
-		--tx-in-count 1 \
-		--tx-out-count 1 \
-		--witness-count 1 \
-		--byron-witness-count 0 \
-		--$(NETWORK)$(NETWORK_PARAMETER) \
-		--protocol-params-file $(POOL_DIR)/protocol.json
-
-local-sign-delegate-tx:
-	cardano-cli transaction build-raw \
-		--tx-in $(txIn) \
-		--tx-out $(shell cat payment.addr)+$(remaining_amount) \
-		--invalid-hereafter $(slot) \
-		--fee $(fee) \
-		--out-file tx.raw \
-		--certificate-file pool-registration.cert \
-		--certificate-file delegation.cert
-	cardano-cli transaction sign \
-		--tx-body-file tx.raw \
-		--signing-key-file payment.skey \
-		--signing-key-file stake.skey \
-		--signing-key-file cold.skey \
-		--$(NETWORK)$(NETWORK_PARAMETER) \
-		--out-file tx.signed
-
-submit-delegate-tx:
-	cardano-cli transaction submit \
-		--tx-file tx.signed \
-		--$(NETWORK)$(NETWORK_PARAMETER)
+local-pool-deregister:
+	cardano-cli stake-pool deregistration-certificate \
+		--cold-verification-key-file cold.vkey \
+		--epoch 118 \
+		--out-file pool.deregistration.cert
 
 local-generate-wallet-keys:
 	@cardano-cli address key-gen \
@@ -357,7 +279,7 @@ local-move-tx-to-server:
 
 local-move-keys-to-server:
 	sftp do-cardano-spo << EOF
-	cd /root/cardano-spo/
+	cd /root/cardano-spo/pool/wallet
 	put payment.skey
 	put payment.vkey
 	put payment.addr
@@ -381,3 +303,64 @@ local-get-keys-from-server:
 	get vrf.vkey
 	quit
 	EOF
+
+
+tx/fee:
+	$(eval txIns := $(foreach txIn,$(1),--tx-in $(txIn) ))
+	$(eval certs := $(foreach cert,$(2),--certificate-file $(cert) ))
+	cardano-cli transaction build-raw \
+		--mary-era \
+		$(txIns) \
+		--tx-out $(shell cat $(POOL_KEY_DIR)/payment.addr)+0 \
+		--invalid-hereafter 0 \
+		--fee 0 \
+		--out-file tx.raw \
+		$(certs)
+	cardano-cli transaction calculate-min-fee \
+		--tx-body-file tx.raw \
+		--tx-in-count $(words $(1)) \
+		--tx-out-count 1 \
+		--witness-count 1 \
+		--byron-witness-count 0 \
+		--$(NETWORK)$(NETWORK_PARAMETER) \
+		--protocol-params-file $(POOL_DIR)/protocol.json
+
+tx/sign:
+	$(eval txIns := $(foreach txIn,$(1),--tx-in $(txIn) ))
+	$(eval certs := $(foreach cert,$(2),--certificate-file $(cert) ))
+	$(eval keys := $(foreach key,$(3),--signing-key-file $(key) ))
+	cardano-cli transaction build-raw \
+		$(txIns) \
+		--tx-out $(shell cat payment.addr)+$(4) \
+		--invalid-hereafter $(5) \
+		--fee $(6) \
+		--out-file tx.raw \
+		$(certs)
+	cardano-cli transaction sign \
+		--tx-body-file tx.raw \
+		$(keys) \
+		--$(NETWORK)$(NETWORK_PARAMETER) \
+		--out-file tx.signed
+
+.PHONY: stake-tx-fee
+stake-tx-fee: ## gets minimum fee for the given stake tx
+	@$(call tx/fee,$(txIn),$(POOL_KEY_DIR)/stake.cert)
+
+local-sign-stake-tx:
+	@$(call tx/sign,\
+		$(txIn), \
+		$(POOL_KEY_DIR)/stake.cert, \
+		$(POOL_KEY_DIR)/payment.skey $(POOL_KEY_DIR)/stake.skey, \
+		$(remaining_amount), $(slot), $(fee))
+
+.PHONY: delegate-tx-fee
+delegate-tx-fee: ## gets minimum fee for the given delegate tx
+	@$(call tx/fee,$(txIn),$(POOL_KEY_DIR)/pool-registration.cert $(POOL_KEY_DIR)/delegation.cert)
+
+local-sign-delegate-tx:
+	@$(call tx/sign,\
+		$(txIn), \
+		$(POOL_KEY_DIR)/pool-registration.cert $(POOL_KEY_DIR)/delegation.cert, \
+		$(POOL_KEY_DIR)/payment.skey $(POOL_KEY_DIR)/stake.skey, $(POOL_KEY_DIR)/cold.skey\
+		$(remaining_amount), $(slot), $(fee))
+

@@ -9,3 +9,4 @@
 **/*.cert
 **/*.raw
 **/*.signed
+**/*.deregistration
