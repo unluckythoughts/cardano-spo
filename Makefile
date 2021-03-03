@@ -109,8 +109,8 @@ get-relay-node-config-files: ## download relay node config files
 	[[ grep -c $(PUBLIC_IP) $(RELAY_NODE_DIR)/testnet-topology.json -eq 0 ]] && sed -i \
 		's/\("valency": 2\)/\1 \
     },{ \
-      "addr": "$(PUBLIC_IP)", \
-      "port":$(STAKING_NODE_PORT), \
+      "addr": "$(PUBLIC_IP)",\
+      "port":$(STAKING_NODE_PORT),\
       "valency":1/g' \
 		$(RELAY_NODE_DIR)/testnet-topology.json
 
@@ -270,7 +270,7 @@ local-generate-stake-pool-certificate:
 		--out-file $(LOCAL_KEY_DIR)/delegation.cert
 
 local-get-stake-pool-id:
-	cardano-cli stake-pool id --cold-verification-key-file cold.vkey
+	cardano-cli stake-pool id --cold-verification-key-file $(LOCAL_KEY_DIR)/cold.vkey
 
 local-move-tx-to-server:
 	sftp do-cardano-spo << EOF
@@ -327,7 +327,7 @@ define tx/sign
 	$(eval keys := $(foreach key,$(3),--signing-key-file $(key) ))
 	cardano-cli transaction build-raw \
 		$(txIns) \
-		--tx-out $(shell cat $(LOCAL_KEY_DIR)/payment.addr)+$(4) \
+		--tx-out $(shell cat $(LOCAL_KEY_DIR)/payment.addr)+$(strip $(4)) \
 		--invalid-hereafter $(5) \
 		--fee $(6) \
 		--out-file tx.raw \
@@ -345,9 +345,9 @@ stake-tx-fee: ## gets minimum fee for the given stake tx
 
 local-sign-stake-tx:
 	@$(call tx/sign,\
-		$(txIn), \
-		$(WALLET_DIR)/stake.cert, \
-		$(WALLET_DIR)/payment.skey $(WALLET_DIR)/stake.skey, \
+		$(txIn),\
+		$(LOCAL_KEY_DIR)/stake.cert,\
+		$(LOCAL_KEY_DIR)/payment.skey $(LOCAL_KEY_DIR)/stake.skey,\
 		$(remaining_amount), $(slot), $(fee))
 
 .PHONY: delegate-tx-fee
@@ -356,8 +356,10 @@ delegate-tx-fee: ## gets minimum fee for the given delegate tx
 
 local-sign-delegate-tx:
 	@$(call tx/sign,\
-		$(txIn), \
-		$(NODE_KEY_DIR)/pool-registration.cert $(NODE_KEY_DIR)/delegation.cert, \
-		$(NODE_KEY_DIR)/payment.skey $(NODE_KEY_DIR)/stake.skey, cold.skey\
-		$(remaining_amount), $(slot), $(fee))
+		$(txIn),\
+		$(LOCAL_KEY_DIR)/pool-registration.cert $(LOCAL_KEY_DIR)/delegation.cert,\
+		$(LOCAL_KEY_DIR)/payment.skey $(LOCAL_KEY_DIR)/stake.skey $(LOCAL_KEY_DIR)/cold.skey,\
+		$(remaining_amount),$(slot),$(fee))
 
+check-pool-created:
+	cardano-cli query ledger-state --testnet-magic 1097911063 | grep $(pool_id)
