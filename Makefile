@@ -300,7 +300,7 @@ local-move-keys-to-server:
 	quit
 	EOF
 
-tx/fee:
+define tx/fee
 	$(eval txIns := $(foreach txIn,$(1),--tx-in $(txIn) ))
 	$(eval certs := $(foreach cert,$(2),--certificate-file $(cert) ))
 	cardano-cli transaction build-raw \
@@ -319,14 +319,15 @@ tx/fee:
 		--byron-witness-count 0 \
 		--$(NETWORK)$(NETWORK_PARAMETER) \
 		--protocol-params-file $(POOL_DIR)/protocol.json
+endef
 
-tx/sign:
+define tx/sign
 	$(eval txIns := $(foreach txIn,$(1),--tx-in $(txIn) ))
 	$(eval certs := $(foreach cert,$(2),--certificate-file $(cert) ))
 	$(eval keys := $(foreach key,$(3),--signing-key-file $(key) ))
 	cardano-cli transaction build-raw \
 		$(txIns) \
-		--tx-out $(shell cat payment.addr)+$(4) \
+		--tx-out $(shell cat $(LOCAL_KEY_DIR)/payment.addr)+$(4) \
 		--invalid-hereafter $(5) \
 		--fee $(6) \
 		--out-file tx.raw \
@@ -336,6 +337,7 @@ tx/sign:
 		$(keys) \
 		--$(NETWORK)$(NETWORK_PARAMETER) \
 		--out-file tx.signed
+endef
 
 .PHONY: stake-tx-fee
 stake-tx-fee: ## gets minimum fee for the given stake tx
